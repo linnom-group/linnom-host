@@ -1,0 +1,72 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\User;
+use Hash;
+use Session;
+
+class AuthController extends Controller
+{
+    public function login(){
+        return view("auth.Login");
+    }
+
+    public function registration(){
+        return view("auth.register");
+    }
+    public function reguser(Request $request){
+        $request->validate([
+            'name'=>'required',
+            'email'=>'required|email|unique:users',
+            'password'=>'required|min:7|max:15'
+     ]);
+        $user = new User();
+        $user->name = $request->name;
+        $user->email = $request->email;
+        $user->password = Hash::make($request->password);
+        $res = $user->save();
+       if ($res) {
+           return back()->with('success','Successfuly regisered');
+       }else{
+        return back()->with('fail','Somthing Weong');
+        }
+    }
+
+    public function loginuser(Request $request){
+        $request->validate([
+            'email'=>'required|email',
+            'password'=>'required|min:7|max:15'
+     ]);
+     $user = User::where('email', '=' , $request->email)->first();
+     if ($user) {
+        if(Hash::check($request->password,$user->password)){
+            $request->session()->put('loginId', $user->id);
+            return redirect('dashboard');
+        }else{
+            return back()->with('fail','wrong Password');
+        }
+     }else{
+        return back()->with('fail','Wrong login details');
+
+     }
+
+    }
+    public function dash(){
+        $data = array();
+        if(Session::has('loginId')){
+            $data = User::where('id', '=' , Session::get('loginId'))->first();
+        }
+        return view('employees.dashboard',compact('data'));
+    } 
+    public function logout(){
+        if(Session::has('loginId')){
+            Session::pull('loginId');
+            return redirect('login');
+
+        }
+    }
+
+    
+}
